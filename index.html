@@ -80,9 +80,9 @@ button { margin: 4px 0; padding: 4px 8px; cursor: pointer; }
     margin: auto;
   }
 
-  canvas {
-    width: 100%;
-    height: auto;
+canvas {
+  display: block;
+  margin: auto;
   }
 } 
 </style>
@@ -245,8 +245,18 @@ function renderLists(type){
 
 function useWish(type,i){ state[type].owned.splice(i,1); save(); renderLists(type); }
 function deleteHistory(type,i){ state[type].history.splice(i,1); save(); renderLists(type); }
+function resizeCanvas(type) {
+  const canvas = document.getElementById(type + "Canvas");
+  const size = Math.min(window.innerWidth - 40, 300);
+  canvas.width = size;
+  canvas.height = size;
 
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(size / 300, 0, 0, size / 300, 0, 0);
+}
+  
 ["girl","me"].forEach(t=>{
+  resizeCanvas(t);
   renderTable(t);
   renderLists(t);
 });
@@ -254,6 +264,7 @@ function deleteHistory(type,i){ state[type].history.splice(i,1); save(); renderL
 
 </body>
 </html>
+
 
 
 
