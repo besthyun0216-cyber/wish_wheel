@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#ff5f6d">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <style>
 body {
   font-family: Arial, sans-serif;
@@ -64,6 +64,27 @@ button { margin: 4px 0; padding: 4px 8px; cursor: pointer; }
   justify-content: space-between;
   margin-bottom: 4px;
 }
+ @media (max-width: 768px) {
+  body {
+    padding: 10px;
+  }
+
+  .container {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .panel {
+    width: 100%;
+    max-width: 420px;
+    margin: auto;
+  }
+
+  canvas {
+    width: 100%;
+    height: auto;
+  }
+} 
 </style>
 </head>
 
@@ -233,5 +254,6 @@ function deleteHistory(type,i){ state[type].history.splice(i,1); save(); renderL
 
 </body>
 </html>
+
 
 
