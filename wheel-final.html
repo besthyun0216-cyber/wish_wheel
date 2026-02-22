@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>커플 소원 돌림판</title>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #f2f2f2;
+  padding: 20px;
+}
+h1 { text-align: center; }
+
+.container {
+  display: flex;
+  gap: 30px;
+  justify-content: center;
+}
+
+.panel {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  width: 460px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.15);
+}
+
+.wheel-wrapper {
+  position: relative;
+  width: 300px;
+  margin: auto;
+}
+
+.pointer {
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 12px solid #000;
+  z-index: 10;
+}
+
+table { width: 100%; margin-top: 10px; }
+input { width: 95%; }
+button { margin: 4px 0; padding: 4px 8px; cursor: pointer; }
+
+.list-box {
+  margin-top: 10px;
+  background: #fafafa;
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🎡 커플 소원 돌림판</h1>
+
+<div class="container">
+  <div class="panel">
+    <h2>👩 여자친구</h2>
+    <div class="wheel-wrapper">
+      <div class="pointer"></div>
+      <canvas id="girlCanvas" width="300" height="300"></canvas>
+    </div>
+    <table id="girlTable"></table>
+    <button onclick="addWish('girl')">➕ 소원 추가</button>
+    <button onclick="spin('girl')">🎯 돌리기</button>
+    <div class="list-box">
+      <b>🎁 보유 소원</b>
+      <div id="girlOwned"></div>
+      <b>📜 히스토리</b>
+      <div id="girlHistory"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>👨 나</h2>
+    <div class="wheel-wrapper">
+      <div class="pointer"></div>
+      <canvas id="meCanvas" width="300" height="300"></canvas>
+    </div>
+    <table id="meTable"></table>
+    <button onclick="addWish('me')">➕ 소원 추가</button>
+    <button onclick="spin('me')">🎯 돌리기</button>
+    <div class="list-box">
+      <b>🎁 보유 소원</b>
+      <div id="meOwned"></div>
+      <b>📜 히스토리</b>
+      <div id="meHistory"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const KEY = "wishWheelFullState";
+
+let state = JSON.parse(localStorage.getItem(KEY)) || {
+  girl: {
+    wishes: [{ text: "데이트 내가 쏘기", weight: 30 }],
+    owned: [],
+    history: []
+  },
+  me: {
+    wishes: [{ text: "밥 사기", weight: 40 }],
+    owned: [],
+    history: []
+  }
+};
+
+function save() {
+  localStorage.setItem(KEY, JSON.stringify(state));
+}
+
+function renderTable(type) {
+  const table = document.getElementById(type + "Table");
+  table.innerHTML = "<tr><th>소원</th><th>확률</th><th></th></tr>";
+  state[type].wishes.forEach((w, i) => {
+    const r = table.insertRow();
+    r.innerHTML = `
+      <td><input value="${w.text}" oninput="updateWish('${type}',${i})"></td>
+      <td><input type="number" value="${w.weight}" oninput="updateWish('${type}',${i})"></td>
+      <td><button onclick="deleteWish('${type}',${i})">❌</button></td>`;
+  });
+}
+
+function updateWish(type, i) {
+  const row = document.getElementById(type+"Table").rows[i+1];
+  state[type].wishes[i] = {
+    text: row.cells[0].children[0].value,
+    weight: Number(row.cells[1].children[0].value)
+  };
+  save();
+}
+
+function addWish(type) {
+  state[type].wishes.push({ text: "새 소원", weight: 10 });
+  save();
+  renderTable(type);
+}
+
+function deleteWish(type, i) {
+  state[type].wishes.splice(i,1);
+  save();
+  renderTable(type);
+}
+
+function drawWheel(ctx, data, angle, hi=-1, pulse=0) {
+  ctx.clearRect(0,0,300,300);
+  const total = data.reduce((s,d)=>s+d.weight,0);
+  let start = angle;
+  data.forEach((d,i)=>{
+    const slice = d.weight/total*Math.PI*2;
+    ctx.beginPath();
+    ctx.moveTo(150,150);
+    ctx.arc(150,150,140,start,start+slice);
+    ctx.fillStyle = i===hi ? `rgba(255,215,0,${0.6+pulse})` : `hsl(${i*60},70%,60%)`;
+    ctx.fill();
+    ctx.save();
+    ctx.translate(150,150);
+    ctx.rotate(start+slice/2);
+    ctx.textAlign="right";
+    ctx.fillStyle="#000";
+    ctx.fillText(d.text,130,5);
+    ctx.restore();
+    start+=slice;
+  });
+}
+
+function spin(type) {
+  const data = state[type].wishes;
+  if (!data.length) return;
+  const canvas = document.getElementById(type+"Canvas");
+  const ctx = canvas.getContext("2d");
+  let angle = 0;
+  const target = Math.random()*Math.PI*6 + Math.PI*6;
+  const start = performance.now();
+  function anim(t){
+    const p=Math.min((t-start)/2000,1);
+    angle=target*(1-Math.pow(1-p,3));
+    drawWheel(ctx,data,angle);
+    if(p<1) requestAnimationFrame(anim);
+    else finish(type,data,angle,ctx);
+  }
+  requestAnimationFrame(anim);
+}
+
+function finish(type,data,angle,ctx){
+  const total=data.reduce((s,d)=>s+d.weight,0);
+  const TWO=Math.PI*2;
+  const pointer=(TWO*3/4-(angle%TWO)+TWO)%TWO;
+  let acc=0,idx=0;
+  for(let i=0;i<data.length;i++){
+    acc+=data[i].weight/total*TWO;
+    if(pointer<=acc){idx=i;break;}
+  }
+  state[type].owned.push(data[idx].text);
+  state[type].history.unshift(data[idx].text);
+  save();
+  renderLists(type);
+}
+
+function renderLists(type){
+  document.getElementById(type+"Owned").innerHTML =
+    state[type].owned.map((t,i)=>`<div class="item">${t}<button onclick="useWish('${type}',${i})">사용</button></div>`).join("");
+  document.getElementById(type+"History").innerHTML =
+    state[type].history.map((t,i)=>`<div class="item">${t}<button onclick="deleteHistory('${type}',${i})">삭제</button></div>`).join("");
+}
+
+function useWish(type,i){ state[type].owned.splice(i,1); save(); renderLists(type); }
+function deleteHistory(type,i){ state[type].history.splice(i,1); save(); renderLists(type); }
+
+["girl","me"].forEach(t=>{
+  renderTable(t);
+  renderLists(t);
+});
+</script>
+
+</body>
+</html>
